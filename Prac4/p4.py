@@ -3,6 +3,7 @@ import RPi.GPIO as GPIO
 import random
 import ES2EEPROMUtils
 import os
+import time
 
 # some global variables that need to change as we run the program
 end_of_game = None  # set if the user wins or ends the game
@@ -12,7 +13,7 @@ LED_value = [11, 13, 15]
 LED_accuracy = 32
 btn_submit = 16
 btn_increase = 18
-buzzer = None
+buzzer = 33
 eeprom = ES2EEPROMUtils.ES2EEPROM()
 
 
@@ -56,7 +57,7 @@ def menu():
 
 def display_scores(count, raw_data):
     # print the scores to the screen in the expected format
-    print("There are {} scores. Here are the top 3!".format(count))
+    print("There are {} scores. Here are the top 3!".format(count)) 
     # print out the scores in the required format
     pass
 
@@ -64,9 +65,30 @@ def display_scores(count, raw_data):
 # Setup Pins
 def setup():
     # Setup board mode
-    # Setup regular GPIO
-    # Setup PWM channels
+    GPIO.setupmode(GPIO.BOARD)
+
+    # Set LED's and Buzzer pins to output mode 
+    GPIO.setup(LED_value, GPIO.OUT, initial=GPIO.LOW)    #LED 0 pin 11, LED 1 pin 13, LED 2 pin 15
+    GPIO.setup(LED_accuracy, GPIO.OUT, initial=GPIO.LOW) #set LED on pin 32 
+    GPIO.setup(buzzer, GPIO.OUT, initial=GPIO.LOW)       #set buzzer as output pin 33
+    #all outputs set with LOW initial state
+
+    # Set submit and increase button pins to output mode   
+    GPIO.setup(btn_submit, GPIO.IN, pull_up_down=GPIO.PUD_UP) #Button submit set as input pin 16  
+    GPIO.setup(btn_increase, GPIO.IN, pull_up_down=GPIO.PUD_UP) #Button increase set as input pin 18 
+    #all inputs use Pull_Up resistors becuase they are externally connected to ground.
+
+    LED_brightness = GPIO.PWM(LED_accuracy, 100)
+    buzzer_pwm = GPIO.PWM(buzzer, 0)
+    
     # Setup debouncing and callbacks
+    GPIO.add_event_detect(btn_increase, GPIO.FALLING, callback=btn_increase_pressed(btn_increase), bouncetime=200) #for increasing guess value
+    GPIO.add_event_detect(btn_submit, GPIO.FALLING, callback=btn_guess_pressed(btn_submit), bouncetime=200) # for submiting guess
+    
+    
+    
+    
+    
     pass
 
 
@@ -100,6 +122,9 @@ def generate_number():
 # Increase button pressed
 def btn_increase_pressed(channel):
     # Increase the value shown on the LEDs
+    GPIO.output(LED_value, GPIO.HIGH)
+    time.sleep(1)
+    GPIO.output(LED_value, GPIO.LOW) #test to flash all lights for a second on increase
     # You can choose to have a global variable store the user's current guess, 
     # or just pull the value off the LEDs when a user makes a guess
     pass
@@ -112,6 +137,8 @@ def btn_guess_pressed(channel):
     # Change the PWM LED
     # if it's close enough, adjust the buzzer
     # if it's an exact guess:
+    buzzer.stop()
+    
     # - Disable LEDs and Buzzer
     # - tell the user and prompt them for a name
     # - fetch all the scores
