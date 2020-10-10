@@ -65,7 +65,7 @@ def display_scores(count, raw_data):
 # Setup Pins
 def setup():
     # Setup board mode
-    GPIO.setupmode(GPIO.BOARD)
+    GPIO.setmode(GPIO.BOARD)
 
     # Set LED's and Buzzer pins to output mode 
     GPIO.setup(LED_value, GPIO.OUT, initial=GPIO.LOW)    #LED 0 pin 11, LED 1 pin 13, LED 2 pin 15
@@ -79,11 +79,11 @@ def setup():
     #all inputs use Pull_Up resistors becuase they are externally connected to ground.
 
     LED_brightness = GPIO.PWM(LED_accuracy, 100)
-    buzzer_pwm = GPIO.PWM(buzzer, 0)
+    buzzer_pwm = GPIO.PWM(buzzer, 1)
     
     # Setup debouncing and callbacks
-    GPIO.add_event_detect(btn_increase, GPIO.FALLING, callback=btn_increase_pressed(btn_increase), bouncetime=200) #for increasing guess value
-    GPIO.add_event_detect(btn_submit, GPIO.FALLING, callback=btn_guess_pressed(btn_submit), bouncetime=200) # for submiting guess
+    GPIO.add_event_detect(btn_increase, GPIO.FALLING, callback=btn_increase_pressed, bouncetime=200) #for increasing guess value
+    GPIO.add_event_detect(btn_submit, GPIO.FALLING, callback=btn_guess_pressed, bouncetime=200) # for submiting guess
     
     
     
@@ -122,9 +122,26 @@ def generate_number():
 # Increase button pressed
 def btn_increase_pressed(channel):
     # Increase the value shown on the LEDs
-    GPIO.output(LED_value, GPIO.HIGH)
-    time.sleep(1)
-    GPIO.output(LED_value, GPIO.LOW) #test to flash all lights for a second on increase
+    guess = [0,0,0]
+    for i in guess: #populate guess with pinstates of 
+    	guess[i] = GPIO.input(LED_value[i])
+    	
+    guess_int = int("".join([str(j) for j in guess]),2)
+    guess_int++
+    if guess_int > 7: #wraps aroud for values above 7
+    	guess_int = 1
+    
+    new_val = [int(x) for x in bin(guess_int)[2:]]
+    
+    for l in new_val:
+    	GPIO.output(LED_value[l], new_val[l]) #writes out to leds
+    
+    
+    	
+    
+    #GPIO.output(LED_value, GPIO.HIGH)
+    #time.sleep(1)
+    #GPIO.output(LED_value, GPIO.LOW) #test to flash all lights for a second on increase
     # You can choose to have a global variable store the user's current guess, 
     # or just pull the value off the LEDs when a user makes a guess
     pass
@@ -133,6 +150,23 @@ def btn_increase_pressed(channel):
 # Guess button
 def btn_guess_pressed(channel):
     # If they've pressed and held the button, clear up the GPIO and take them back to the menu screen
+    time.sleep(0.3)
+    if GPIO.input(channel) == 0:
+    	welcome()
+    
+    guess = [0,0,0]
+    for i in guess: #populate guess with pinstates of 
+    	guess[i] = GPIO.input(LED_value[i])
+    	
+    guess_int = int("".join([str(j) for j in guess]),2)
+    
+    diff = abs(value - guess_int)
+    switch diff{
+    	case 1: 
+    
+    
+    }
+    	
     # Compare the actual value with the user value displayed on the LEDs
     # Change the PWM LED
     # if it's close enough, adjust the buzzer
@@ -149,7 +183,7 @@ def btn_guess_pressed(channel):
 
 
 # LED Brightness
-def accuracy_leds():
+def accuracy_leds(difference):
     # Set the brightness of the LED based on how close the guess is to the answer
     # - The % brightness should be directly proportional to the % "closeness"
     # - For example if the answer is 6 and a user guesses 4, the brightness should be at 4/6*100 = 66%
@@ -157,10 +191,13 @@ def accuracy_leds():
     pass
 
 # Sound Buzzer
-def trigger_buzzer():
+def trigger_buzzer(difference):
     # The buzzer operates differently from the LED
     # While we want the brightness of the LED to change(duty cycle), we want the frequency of the buzzer to change
     # The buzzer duty cycle should be left at 50%
+    
+    buzzer_pwm.start(0.5)
+    
     # If the user is off by an absolute value of 3, the buzzer should sound once every second
     # If the user is off by an absolute value of 2, the buzzer should sound twice every second
     # If the user is off by an absolute value of 1, the buzzer should sound 4 times a second
